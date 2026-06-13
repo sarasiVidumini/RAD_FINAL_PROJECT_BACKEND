@@ -26,13 +26,13 @@ router.post(
   uploadNote
 );
 
-router.put(
-  '/:noteId',
-  protect,
-  authorizeRoles('student', 'expert', 'admin'),
-  upload.array('files', 3),
-  updateNote
-);
+// router.put(
+//   '/:noteId',
+//   protect,
+//   authorizeRoles('student', 'expert', 'admin'),
+//   upload.array('files', 3),
+//   updateNote
+// );
 
 router.post(
   '/generate-quiz',
@@ -48,6 +48,7 @@ router.get(
 
 // DYNAMIC PARAMETER PATHS (last)
 router.post('/:noteId/rate', protect, rateNote);
+router.put('/:noteId', protect, updateNote);
 router.delete('/:noteId', protect, deleteNote);
 
 export default router;
