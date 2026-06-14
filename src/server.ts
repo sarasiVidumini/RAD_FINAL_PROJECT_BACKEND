@@ -4,6 +4,8 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet'; // Added for CSP configuration management
+import path from 'path';     // Added to map filesystem paths cleanly
 import connectDB from './config/db';
 
 // Import Routes
@@ -11,6 +13,7 @@ import authRoutes from './routes/authRoutes';
 import noteRoutes from './routes/noteRoutes';
 import requestRoutes from './routes/requestRoute';
 import expertRoutes from './routes/expertRoutes';
+import chatRoutes from './routes/chatRoutes';
 
 const app = express();
 
@@ -21,15 +24,38 @@ app.use(cors({
   allowedHeaders: ['Authorization', 'Content-Type']
 }));
 
+// Content Security Policy (CSP) Configuration to fix the browser loading block
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // Whitelists local port 5000 so the frontend can display image attachments
+        imgSrc: ["'self'", "data:", "https:", "http://localhost:5000"],
+        // Whitelists network connection access pipelines
+        connectSrc: ["'self'", "http://localhost:5000"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    // Allows cross-origin requests for resources (like displaying your uploaded files)
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
+
 // Increased body parser limits to accommodate larger base64 file buffers safely
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve static assets out of the local root /uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/experts', expertRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Root Route
 app.get('/', (req, res) => {

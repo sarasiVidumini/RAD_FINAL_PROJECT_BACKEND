@@ -74,18 +74,19 @@ export const uploadNote = async (req: any, res: Response) => {
       uploadedBy: req.user.id,
     });
 
-    // Auto-fulfill request if provided
+    
     if (requestId) {
       const request = await RequestModel.findById(requestId);
-      if (request && request.status === 'open') {
+        if (request && request.status === 'open') {
         request.status = 'fulfilled';
-        request.fulfilledBy = req.user.id;
-        request.fulfilledNote = note._id;
-        await request.save();
+        request.fulfilledBy = req.user.id as any; // Cast if req.user.id throws a similar error
+        request.fulfilledNote = note._id as any;   // FIX: Added 'as any' here
 
-        await User.findByIdAndUpdate(req.user.id, { $inc: { helpPoints: 10 } });
-      }
+      await request.save();
+
+      await User.findByIdAndUpdate(req.user.id, { $inc: { helpPoints: 10 } });
     }
+  }
 
     res.status(201).json(note);
   } catch (error: any) {

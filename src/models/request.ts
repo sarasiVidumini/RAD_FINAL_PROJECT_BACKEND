@@ -7,8 +7,8 @@ export interface IRequest extends Document {
   description: string;
   requestedBy: Types.ObjectId;
   status: 'open' | 'fulfilled';
-  fulfilledBy?: Types.ObjectId;
-  fulfilledNote?: Types.ObjectId;
+  fulfilledBy?: Schema.Types.ObjectId;
+  fulfilledNote?: Schema.Types.ObjectId;
   helpPoints: number;
   createdAt: Date;
 }
