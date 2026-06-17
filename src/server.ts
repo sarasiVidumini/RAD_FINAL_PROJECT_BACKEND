@@ -47,15 +47,19 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Serve static assets out of the local root /uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// FIXED: Serve static assets straight from the project execution root folder
+// This aligns identically with Multer creating and writing to 'uploads/'
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/experts', expertRoutes);
+
+
 app.use('/api/chat', chatRoutes);
+app.use('/api/chats', chatRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
