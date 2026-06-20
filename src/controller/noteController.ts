@@ -29,13 +29,31 @@ interface MulterFile {
 
 }
 
+const VALID_DOC_TYPES = ['note', 'paper'];
+
 export const uploadNote = async (req: any, res: Response) => {
   try {
-    const { title, subject, semester, description, requestId } = req.body;
+    const { title, subject, subjectCode, semester, description, requestId } = req.body;
+    let { docType } = req.body;
     const files = (req.files || []) as MulterFile[];
 
     if (!files || files.length === 0) {
       return res.status(400).json({ message: 'Please upload at least one file' });
+    }
+
+    if (!subjectCode || !String(subjectCode).trim()) {
+      return res.status(400).json({ message: 'Subject code is required (e.g. PRF, DBMS, OOP, SE)' });
+    }
+
+    // Default to 'note' if not provided
+    docType = (docType || 'note').toLowerCase();
+    if (!VALID_DOC_TYPES.includes(docType)) {
+      return res.status(400).json({ message: "Invalid docType. Must be 'note' or 'paper'." });
+    }
+
+    // Only experts/admins may upload papers
+    if (docType === 'paper' && req.user.role !== 'expert' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only experts or admins can upload papers.' });
     }
 
     const uploadedFiles: string[] = [];
@@ -51,7 +69,7 @@ export const uploadNote = async (req: any, res: Response) => {
       const fileBase64 = file.buffer.toString('base64');
 
       const dataURI = `data:${file.mimetype};base64,${fileBase64}`;
-      
+
       const result = await cloudinary.uploader.upload(dataURI, {
         folder: 'notevault',
         resource_type: 'auto'
@@ -62,37 +80,41 @@ export const uploadNote = async (req: any, res: Response) => {
       } else {
         throw new Error("Cloudinary upload failed");
       }
+
     }
 
 
     const note = await Note.create({
       title,
       subject,
+      subjectCode: String(subjectCode).trim().toUpperCase(),
+      docType,
       semester: Number(semester),
       description,
       files: uploadedFiles,
       uploadedBy: req.user.id,
     });
 
-    
     if (requestId) {
       const request = await RequestModel.findById(requestId);
-        if (request && request.status === 'open') {
+      if (request && request.status === 'open') {
         request.status = 'fulfilled';
-        request.fulfilledBy = req.user.id as any; // Cast if req.user.id throws a similar error
-        request.fulfilledNote = note._id as any;   // FIX: Added 'as any' here
+        request.fulfilledBy = req.user.id as any;
+        request.fulfilledNote = note._id as any;
 
-      await request.save();
-
-      await User.findByIdAndUpdate(req.user.id, { $inc: { helpPoints: 10 } });
+        await request.save();
+        await User.findByIdAndUpdate(req.user.id, { $inc: { helpPoints: 10 } });
+      }
     }
-  }
 
-    res.status(201).json(note);
+    const populatedNote = await note.populate('uploadedBy', 'name department role');
+
+    res.status(201).json(populatedNote);
   } catch (error: any) {
     console.error("❌ Upload Error:", error);
     res.status(500).json({ message: error.message || "Internal Server Error" });
   }
+
 };
 
 
@@ -102,9 +124,7 @@ export const updateNote = async (req: any, res: Response) => {
   try {
 
     const { noteId } = req.params;
-
-    const { title, subject, semester, description } = req.body;
-
+    const { title, subject, subjectCode, docType, semester, description } = req.body;
     const files = (req.files || []) as MulterFile[];
 
     const note = await Note.findById(noteId);
@@ -125,9 +145,21 @@ export const updateNote = async (req: any, res: Response) => {
 
     if (subject) updateData.subject = subject;
 
+    if (subjectCode) updateData.subjectCode = String(subjectCode).trim().toUpperCase();
     if (semester) updateData.semester = Number(semester);
 
     if (description !== undefined) updateData.description = description;
+
+    if (docType) {
+      const normalizedDocType = String(docType).toLowerCase();
+      if (!VALID_DOC_TYPES.includes(normalizedDocType)) {
+        return res.status(400).json({ message: "Invalid docType. Must be 'note' or 'paper'." });
+      }
+      if (normalizedDocType === 'paper' && req.user.role !== 'expert' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only experts or admins can mark uploads as papers.' });
+      }
+      updateData.docType = normalizedDocType;
+    }
 
     // Handle new file uploads if provided
 
@@ -170,8 +202,7 @@ export const updateNote = async (req: any, res: Response) => {
       updateData,
 
       { new: true, runValidators: true }
-
-    ).populate('uploadedBy', 'name department');
+    ).populate('uploadedBy', 'name department role');
 
     res.json(updatedNote);
 
@@ -188,8 +219,7 @@ export const updateNote = async (req: any, res: Response) => {
 export const getAllNotes = async (req: Request, res: Response) => {
 
   try {
-
-    const { search, subject, semester } = req.query;
+    const { search, subject, subjectCode, semester, docType } = req.query;
 
     let query: any = {};
 
@@ -205,17 +235,21 @@ export const getAllNotes = async (req: Request, res: Response) => {
       query.subject = subject;
 
     }
+    if (subjectCode) {
+      query.subjectCode = String(subjectCode).toUpperCase();
+    }
 
     if (semester) {
 
       query.semester = Number(semester);
 
     }
+    if (docType && VALID_DOC_TYPES.includes(String(docType).toLowerCase())) {
+      query.docType = String(docType).toLowerCase();
+    }
 
     const notes = await Note.find(query)
-
-      .populate('uploadedBy', 'name department')
-
+      .populate('uploadedBy', 'name department role')
       .sort({ createdAt: -1 });
 
     res.json(notes);
@@ -226,7 +260,10 @@ export const getAllNotes = async (req: Request, res: Response) => {
 
   }
 
+
 };
+
+
 
 export const getMyNotes = async (req: any, res: Response) => {
 
@@ -234,8 +271,7 @@ export const getMyNotes = async (req: any, res: Response) => {
 
     const notes = await Note.find({ uploadedBy: req.user.id })
 
-      .populate('uploadedBy', 'name department')
-
+      .populate('uploadedBy', 'name department role')
       .sort({ createdAt: -1 });
 
     res.json(notes);
@@ -274,7 +310,6 @@ export const rateNote = async (req: any, res: Response) => {
 
     }
 
-    
     note.averageRating = note.ratings.reduce((acc, r) => acc + r.rating, 0) / note.ratings.length;
 
     await note.save();
@@ -311,6 +346,7 @@ export const deleteNote = async (req: any, res: Response) => {
 
     }
 
+
     await Note.findByIdAndDelete(req.params.noteId);
 
     res.json({
@@ -320,7 +356,7 @@ export const deleteNote = async (req: any, res: Response) => {
       noteId: req.params.noteId
 
     });
-
+    
   } catch (error: any) {
 
     res.status(500).json({ message: error.message });
@@ -388,4 +424,5 @@ export const streamNoteFile = async (req: any, res: Response): Promise<void> => 
       res.status(500).json({ message: "Failed to load secure resource stream.", error: error.message });
     }
   }
+
 };

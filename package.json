@@ -1,7 +1,7 @@
 {
   "name": "rad_final_project_backend",
   "version": "1.0.0",
-  "description": "BatchFlow Smart Batch Mate Connect & Resource Hub Backend",
+  "description": "NoteVault Smart Batch Mate Connect & Resource Hub Backend",
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn src/server.ts",

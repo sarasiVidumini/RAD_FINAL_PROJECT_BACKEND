@@ -25,6 +25,7 @@ app.use(cors({
 }));
 
 // Content Security Policy (CSP) Configuration to fix the browser loading block
+// Content Security Policy (CSP) Configuration to fix the browser loading block
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -34,7 +35,9 @@ app.use(
         imgSrc: ["'self'", "data:", "https:", "http://localhost:5000"],
         // Whitelists network connection access pipelines
         connectSrc: ["'self'", "http://localhost:5000"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        // UPDATED: Added "blob:" to scriptSrc and added workerSrc configuration
+        scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
         styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },

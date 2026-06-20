@@ -26,13 +26,7 @@ router.post(
   uploadNote
 );
 
-// router.put(
-//   '/:noteId',
-//   protect,
-//   authorizeRoles('student', 'expert', 'admin'),
-//   upload.array('files', 3),
-//   updateNote
-// );
+
 
 router.post(
   '/generate-quiz',
