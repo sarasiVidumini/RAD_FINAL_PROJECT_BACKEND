@@ -33,7 +33,7 @@ app.use(
         // Whitelists local port 5000 so the frontend can display image attachments
         imgSrc: ["'self'", "data:", "https:", "http://localhost:5000"],
         // Whitelists network connection access pipelines including Google's Identity endpoints
-        connectSrc: ["'self'", "http://localhost:5000", "https://accounts.google.com/"],
+        connectSrc: ["'self'", "http://localhost:5000", "https://accounts.google.com/", "https://oauth2.googleapis.com/"],
         // Whitelists local execution scripts and the Google Identity Services client script
         scriptSrc: ["'self'", "'unsafe-inline'", "blob:", "https://accounts.google.com/gsi/client"],
         // Whitelists the iframe context wrapper required by the Google Sign-In prompt overlay
@@ -52,13 +52,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve static assets straight from the project execution root folder
-// This aligns identically with Multer creating and writing to 'uploads/'
+
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/requests', requestRoutes);
+
 app.use('/api/experts', expertRoutes);
 
 

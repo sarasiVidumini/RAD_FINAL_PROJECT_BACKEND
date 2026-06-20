@@ -10,28 +10,38 @@ const router = Router();
 router.post('/register', register);
 router.post('/login', login);
 
-// Secure Google Login Route with Client ID Verification
+// Secure Google Login Route with Mismatch Proof Sanitization
 router.post('/google-login', async (req: Request, res: Response): Promise<any> => {
-  const { accessToken } = req.body;
+  const { accessToken, role, department, semester, expertise } = req.body;
 
   if (!accessToken) {
     return res.status(400).json({ message: "Access token is missing" });
   }
 
   try {
-    // 1. Verify token integrity and ensure it belongs to your Client ID
+    // 1. Verify token integrity via Google Network API
     const tokenInfoResponse = await axios.get(
       `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
     );
 
     const targetClientId = tokenInfoResponse.data.aud;
+    const authorizedParty = tokenInfoResponse.data.azp; // Fallback container used by Google Identity implicitly
 
-    // Security Check: Match against backend environment variable
-    if (targetClientId !== process.env.GOOGLE_CLIENT_ID) {
+    // Sanitize values to eliminate hidden quotes or extra white spaces from .env files
+    const cleanEnvClientId = (process.env.GOOGLE_CLIENT_ID || '').replace(/^["']|["']$/g, '').trim();
+    const cleanTargetClientId = (targetClientId || '').trim();
+    const cleanAuthorizedParty = (authorizedParty || '').trim();
+
+    // Strict Security Match Check matching both potential payload positions
+    if (cleanTargetClientId !== cleanEnvClientId && cleanAuthorizedParty !== cleanEnvClientId) {
+      console.error("❌ OAUTH VALIDATION MISMATCH:");
+      console.error(`- Received 'aud' Key from Token: "${cleanTargetClientId}"`);
+      console.error(`- Received 'azp' Key from Token: "${cleanAuthorizedParty}"`);
+      console.error(`- Expected Backend Env ID:      "${cleanEnvClientId}"`);
       return res.status(401).json({ message: "Token client ID mismatch. Security violation." });
     }
 
-    // 2. Fetch user profile information using the verified token
+    // 2. Fetch user profile data using the verified token
     const googleResponse = await axios.get(
       `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
     );
@@ -46,34 +56,37 @@ router.post('/google-login', async (req: Request, res: Response): Promise<any> =
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      // Role Routing: Catch and escalate system administrator email
-      let assignedRole: 'student' | 'expert' | 'admin' = 'student';
+      // Role Routing Validation Engine
+      let assignedRole: 'student' | 'expert' | 'admin' = role || 'student';
+      
       if (email.toLowerCase() === 'admin@glowcare.ai') {
         assignedRole = 'admin';
       }
 
+      // Provision user account mapping metadata submitted from frontend form
       user = await User.create({
         name: name || 'Google User',
         email: email.toLowerCase(),
         role: assignedRole,
         googleId: googleId,
-        department: 'General', 
-        semester: assignedRole === 'student' ? 2 : undefined 
+        department: department || 'General', 
+        semester: assignedRole === 'student' ? (semester || 1) : undefined,
+        expertise: assignedRole === 'expert' ? expertise : undefined
       });
     } else if (!user.googleId) {
-      // Link Google ID if signing in via Google for the first time
+      // Link Google Account identity key permanently if email matches
       user.googleId = googleId;
       await user.save();
     }
 
-    // 4. Generate application JWT
+    // 4. Generate application access token (JWT)
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_in_production',
+      process.env.JWT_SECRET || 'note_vault_fallback_secure_key_2026',
       { expiresIn: '7d' }
     );
 
-    // 5. Respond with frontend auth state payload match
+    // 5. Send optimized payload structure back to frontend
     return res.status(200).json({
       token,
       user: {
@@ -82,7 +95,8 @@ router.post('/google-login', async (req: Request, res: Response): Promise<any> =
         email: user.email,
         role: user.role,
         semester: user.semester,
-        department: user.department
+        department: user.department,
+        expertise: user.expertise
       }
     });
 
