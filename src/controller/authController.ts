@@ -21,8 +21,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Rule Signature Enforcement Match Matrix
     let assignedRole: UserRole = req.body.role || 'student';
-    // FIXED: Updated admin detection criteria to look for admin@glowcare.ai
-    if (email.toLowerCase() === 'admin@college.edu') {
+    
+    // FIXED: Updated admin detection criteria to target admin@glowcare.ai
+    if (email.toLowerCase() === 'admin@notevault.com') {
       assignedRole = 'admin';
     }
 
@@ -63,7 +64,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (user && (await bcrypt.compare(password, user.password))) {
+    
+    // FIXED: Added an explicit user.password check to act as a TypeScript type-guard.
+    // This safely rejects standard login requests for passwordless OAuth (Google) users.
+    if (user && user.password && (await bcrypt.compare(password, user.password))) {
       res.json({
         token: generateToken(user._id.toString(), user.role),
         user: {
