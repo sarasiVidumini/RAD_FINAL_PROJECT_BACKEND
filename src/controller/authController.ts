@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const generateToken = (id: string, role: UserRole) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'secret_note_vault_key', {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'note_vault_fallback_secure_key_2026', {
     expiresIn: '7d',
   });
 };
@@ -13,16 +13,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password, department, semester, expertise } = req.body;
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
       res.status(400).json({ message: 'User identity already exists.' });
       return;
     }
 
-    // Rule Signature Enforcement Match Matrix
+
     let assignedRole: UserRole = req.body.role || 'student';
     
-    // FIXED: Updated admin detection criteria to target admin@glowcare.ai
+    // Core Email Rule Enforcement Match
     if (email.toLowerCase() === 'admin@notevault.com') {
       assignedRole = 'admin';
     }
@@ -63,10 +63,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     
-    // FIXED: Added an explicit user.password check to act as a TypeScript type-guard.
-    // This safely rejects standard login requests for passwordless OAuth (Google) users.
+  
     if (user && user.password && (await bcrypt.compare(password, user.password))) {
       res.json({
         token: generateToken(user._id.toString(), user.role),
@@ -87,4 +86,5 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error: any) {
     res.status(500).json({ message: 'Authentication runtime error.', error: error.message });
   }
+  
 };

@@ -13,8 +13,9 @@ export const protect = async (req: AuthenticatedRequest, res: Response, next: Ne
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
+      
       token = req.headers.authorization.split(' ')[1];
-      // Synchronized fallback key to match auth routes precisely
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'note_vault_fallback_secure_key_2026') as { id: string; role: any };
       
       req.user = { id: decoded.id, role: decoded.role };

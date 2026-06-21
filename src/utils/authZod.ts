@@ -5,8 +5,8 @@ export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   department: z.string(),
-  semester: z.number().min(1).max(8),
-  role: z.enum(['student', 'admin']).optional().default('student'),
+  semester: z.number().min(1).max(8).optional(),
+  role: z.enum(['student', 'expert', 'admin']).optional().default('student'),
 });
 
 export const loginSchema = z.object({
