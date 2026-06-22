@@ -10,7 +10,7 @@ import {
   streamNoteFile
 } from '../controller/noteController';
 import { generateQuizFromNote } from '../controller/quizController';
-import upload from '../middleware/upload';
+import {upload} from '../middleware/upload';
 
 const router = Router();
 

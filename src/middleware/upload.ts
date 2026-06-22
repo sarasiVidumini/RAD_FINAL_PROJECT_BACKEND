@@ -18,11 +18,12 @@ const fileFilter = (req: any, file: any, cb: any) => {
 };
 
 // 3. Initialize the multer upload configuration instance
-const upload = multer({
+const multerInstance = multer({
   storage: storage,
   fileFilter: fileFilter,
   // FIXED: Raised single file threshold capacity limit to 50MB
   limits: { fileSize: 50 * 1024 * 1024 } 
 });
 
-export default upload;
+// Export as a named constant 'upload' to match your import in routes/user.ts
+export const upload = multerInstance;

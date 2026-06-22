@@ -13,6 +13,7 @@ export interface IUser extends Document {
   googleId?: string;      // Added to track linked Google Accounts
   createdAt: Date;
   updatedAt: Date;
+  avatarUrl?: string;
 }
 
 const userSchema = new Schema<IUser>({

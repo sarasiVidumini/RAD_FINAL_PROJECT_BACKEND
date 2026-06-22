@@ -13,6 +13,7 @@ import bcrypt from 'bcryptjs';
 import { User } from './models/user'; 
 
 
+
 // Import Real-time Socket Controller Handler
 import { initializeGroupChatSockets } from './controller/groupChatController';
 
@@ -23,6 +24,8 @@ import requestRoutes from './routes/requestRoute';
 import expertRoutes from './routes/expertRoutes';
 import chatRoutes from './routes/chatRoutes';
 import aiRoutes from './routes/aiRoute'
+import userMyProfilesUploadRoute from './routes/userMyProfilesUploadRoute'
+
 
 const app = express();
 
@@ -74,6 +77,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Serve static assets straight from the project execution root folder
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
+// In your backend server.ts
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // API Routes Base Configuration Maps
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
@@ -87,6 +93,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/chats', chatRoutes);
 
 app.use('/api/ai', aiRoutes);
+
+app.use('/api/user', userMyProfilesUploadRoute);
 
 /**
  * ========================================================
