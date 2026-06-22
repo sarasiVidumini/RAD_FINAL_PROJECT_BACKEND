@@ -12,6 +12,7 @@ import connectDB from './config/db';
 import bcrypt from 'bcryptjs'; 
 import { User } from './models/user'; 
 
+
 // Import Real-time Socket Controller Handler
 import { initializeGroupChatSockets } from './controller/groupChatController';
 
@@ -21,6 +22,7 @@ import noteRoutes from './routes/noteRoutes';
 import requestRoutes from './routes/requestRoute';
 import expertRoutes from './routes/expertRoutes';
 import chatRoutes from './routes/chatRoutes';
+import aiRoutes from './routes/aiRoute'
 
 const app = express();
 
@@ -31,17 +33,26 @@ app.use(cors({
   allowedHeaders: ['Authorization', 'Content-Type']
 }));
 
-// Content Security Policy (CSP) Configuration updated for Google OAuth compatibility
+// Content Security Policy (CSP) Configuration
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
+
         defaultSrc: ["'self'"],
 
         imgSrc: ["'self'", "data:", "https:", "http://localhost:5000"],
-
-        connectSrc: ["'self'", "http://localhost:5000", "ws://localhost:5000", "https://accounts.google.com/", "https://oauth2.googleapis.com/"],
-
+        
+        // ADDED: https://api.anthropic.com to allow proxying
+        connectSrc: [
+          "'self'", 
+          "http://localhost:5000", 
+          "ws://localhost:5000", 
+          "https://accounts.google.com/", 
+          "https://oauth2.googleapis.com/",
+          "https://api.anthropic.com" 
+        ],
+        
         scriptSrc: ["'self'", "'unsafe-inline'", "blob:", "https://accounts.google.com/gsi/client"],
 
         frameSrc: ["'self'", "https://accounts.google.com/"],
@@ -74,6 +85,8 @@ app.use('/api/experts', expertRoutes);
 
 app.use('/api/chat', chatRoutes);
 app.use('/api/chats', chatRoutes);
+
+app.use('/api/ai', aiRoutes);
 
 /**
  * ========================================================
