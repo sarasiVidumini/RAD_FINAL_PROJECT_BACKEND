@@ -33,6 +33,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+
 /**
  * ==========================================
  * PUBLIC GROUP SCHEMAS & DATABASE CONFIGS
@@ -199,7 +201,7 @@ router.post('/upload', protect, upload.single('file'), (req: any, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file asset attached for processing." });
   }
-  const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+  const fileUrl = `${backendUrl}/uploads/${req.file.filename}`;
   return res.status(200).json({ fileUrl });
 });
 
